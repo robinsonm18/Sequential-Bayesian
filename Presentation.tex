@@ -1,0 +1,283 @@
+\documentclass{beamer}
+%\documentclass[aspectratio=169]{beamer} % 使用 16:9 宽屏比例
+\usepackage{ctex, hyperref}
+\usepackage[T1]{fontenc}
+
+% other packages
+\usepackage{latexsym,amsmath,xcolor,multicol,booktabs,calligra}
+\usepackage{graphicx,pstricks,listings,stackengine}
+
+\author{Mark Robinson}
+\title{Temporal-aware Bayesian inference for optimizing experimental returns}
+\subtitle{STATS 209 - Project Presentation}
+\institute{Stanford University}
+\date{2025 12 03}
+\usepackage{CNU}
+\usepackage{natbib}
+
+\bibliographystyle{agsm}
+\setcitestyle{citesep={;}, aysep={,}}
+
+%[<+-| alert@+>] 
+
+% defs
+\def\cmd#1{\texttt{\color{red}\footnotesize $\backslash$#1}}
+\def\env#1{\texttt{\color{blue}\footnotesize #1}}
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+\definecolor{halfgray}{gray}{0.55}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries\color{deepblue},
+    emphstyle=\ttfamily\color{deepred},    % Custom highlighting style
+    stringstyle=\color{deepgreen},
+    numbers=left,
+    numberstyle=\small\color{halfgray},
+    rulesepcolor=\color{red!20!green!20!blue!20},
+    frame=shadowbox,
+}
+
+
+\renewcommand{\figurename}{Figure}
+\renewcommand{\tablename}{Table}
+\setbeamerfont{caption}{family=\rmfamily}
+\setbeamerfont{caption name}{family=\rmfamily}
+\renewcommand{\refname}{References}
+\renewcommand{\bibname}{References} % sometimes used by Beamer
+\setbeamerfont{block body}{family=\kaishu}
+\setbeamerfont{block title}{family=\heiti}
+\setbeamerfont{bibliography item}{family=\rmfamily}
+\setbeamerfont{bibliography entry author}{family=\rmfamily}
+\setbeamerfont{bibliography entry title}{family=\rmfamily}
+\setbeamerfont{bibliography entry location}{family=\rmfamily}
+\setbeamerfont{bibliography entry note}{family=\rmfamily}
+\setbeamertemplate{bibliography item}[text]
+
+\begin{document}
+
+\kaishu
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}
+    \tableofcontents[sectionstyle=show,subsectionstyle=show/shaded/hide,subsubsectionstyle=show/shaded/hide]
+\end{frame}
+
+
+\section{Introduction}
+
+\begin{frame}{Background \& Motivation}
+    \begin{itemize}
+        \item Representative problem: Experimentation program design in the technology industry
+        \item Competing approaches to program design:
+            \begin{itemize}
+                \item Traditional frequentist approach: searching for statistically significant results
+                \item Bayesian approach: directly optimizing for business metrics (e.g. user satisfaction; click-through rate)
+            \end{itemize}
+        \item Potential gains from improvements?
+            \begin{itemize}
+            \item Faster and more accurate testing at lower cost             \begin{itemize}
+                \item \textit{Preview}: This is achievable!
+            \end{itemize}
+            \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\section{Model}
+
+\begin{frame}{Model set-up (outline)}
+Model for experimental program design (e.g. \cite{azevedo2020b}, \cite{sudijono2025optimizing}) -- 
+    \begin{itemize}
+        \item Set-up: 
+        \begin{itemize}
+            \item Organization generates a set of ideas over time; can choose which ideas to implement.
+            \item Ideas have some true (unobserved) value, organization would only like to implement good ideas. 
+            \item Organization can carry out testing to learn about the true value of ideas, but faces limited testing resources.
+        \end{itemize}
+        \item Organization problem: Choose --  
+        \begin{enumerate}
+            \item\textbf{Testing procedure}: Which ideas to test, and how many resources to allocate to each test
+            \item \textbf{Decision rule}: Given testing results, which ideas to `shelve' and which to `ship'
+        \end{enumerate}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Model set-up (notation)}
+    \begin{itemize}
+        \item Set-up: 
+        \begin{itemize}
+            \item Discrete time periods $t$: $1, \dots, \infty$ 
+            \item New ideas generated each period $i$: $1, \dots, I_t$
+            \item Testing resources each period $n$: $1, \dots, N_t$
+        \end{itemize}
+        \item Ideas and testing:
+        \begin{itemize}
+            \item True idea values $\Delta_i$; prior over idea values: $\Delta_i \sim _{iid} (\mu,\tau^2)$.
+            \item Signal for idea $i$ generated according to $\hat \Delta_i \sim (\Delta_i,\frac{\sigma^2}{N_i})$, where $N_i$ is the number of units allocated for testing for unit $i$, and $\sigma^2$ is some baseline level of noise.
+        \end{itemize}
+        \item Payoff:
+        \begin{itemize}
+            \item Organization payoff each period equal to: 
+        \end{itemize}
+            $$U_t = \sum_{\{i\in S_t\}} u(\Delta_i) = \sum_{\{i\in S_t\}} \Delta_i$$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Extending decisions to be `temporal-aware'}
+    \begin{itemize}
+    \item \textcolor{red}{New} organization problem: Choose --
+        \begin{enumerate}
+            \item\textbf{Testing procedure}: Which ideas to test, and how many resources to allocate to each test
+            \item \textbf{Decision rule}: Given testing results \textcolor{red}{across all previous periods}, which ideas to `shelve', which to `ship' \textcolor{red}{and which to continue testing}
+        \end{enumerate}
+    \item Formulating the new problem:
+        \begin{itemize}
+            \item Let $I^c_t$ denote cumulative ideas up to period $t$, and similar for $\Delta^c_{i,t}, n^c_{i,t}$. Let $\gamma$ be a discount factor over the future. Then total expected reward from shipping ideas with positive posterior mean is:
+        \end{itemize}
+    $$\textcolor{red}{\sum_{t=1}^\infty \gamma^t }\sum_{i=1}^{I\textcolor{red}{^c_t}} \mathbb{E}[\mathbb{E}[u(\Delta_{i,\textcolor{red}{t}})|{\hat\Delta^\textcolor{red}{c}}_{i,\textcolor{red}{t}}; {n^\textcolor{red}{c}}_{i,\textcolor{red}{t}}] \textcolor{red}{1(n_{i,t}^c)} ]$$
+        \begin{itemize}
+            where $1(n_{i,t}^c)$ is an indicator of whether the inner expectation is larger than the `ship' threshold.
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Optimal organization decision-making}
+The optimal organization decisions will cover the following:
+    \begin{enumerate}
+        \item Decision rule thresholds: Optimal shelve/continue testing/ship thresholds ($\alpha; \beta)$ over $\tilde \Delta_i$ for an idea, dependent on how times the idea has previously been tested: $\tilde\Delta_i < \alpha \implies$ shelve; $\tilde \Delta_i > \beta \implies$ ship; $\tilde \Delta_i \in [\alpha,\beta] \implies$ continue testing
+         \begin{itemize}
+            \item Optimal thresholds determine $\beta$ by $U_t(\beta) = \beta$; and $\alpha$ by $U_t(\alpha) = U_0$, where $U_0$ is the expected return from an untested idea.
+        \end{itemize}
+        \item Number of ideas to test each period $(k)$
+         \begin{itemize}
+            \item Assumption 1: Test every idea assigned to `continue testing'
+            \item Assumption 2: Test the same number of ideas overall each period ($k_t = k_{t+1}$)
+            \item Assumption 3: Allocate resources equally between tested ideas each period ($n_{i,t} = \frac{N_t}{k}$). Motivation -- \cite{sudijono2025optimizing}.
+        \end{itemize}
+    \end{enumerate}    
+\end{frame}
+
+\begin{frame}{Solution approach}
+Constructing a solution -- 
+    \begin{itemize}
+        \item Solve using numerical methods. For simplicity:
+        \begin{itemize}
+            \item Normal prior distribution over ideas derived from Netflix experimentation data \citep{sudijono2025optimizing} [Work in progress, placeholder values used for now]
+            \item Risk-neutral utility function $U(x) = x$
+        \end{itemize}
+        \item Solving proceeds iteratively as follows:
+        \begin{enumerate}
+            \item Deriving decision rule thresholds:
+             \begin{itemize}
+                \item Given prior and parameters, $k$, and a guess/estimate for $U_0$, identify optimal shelve/continue/ship thresholds
+                \item Given optimal thresholds, derive $U_0$. 
+                \item Repeat until convergence.
+            \end{itemize}
+            \item Deriving optimal number of ideas to test:
+             \begin{itemize}
+                \item Given decision rule thresholds, calculate implied expected utility from each possible number of ideas. Choose $n^*$ to maximize expected utility.
+            \end{itemize}
+        \end{enumerate}    
+            
+        \end{itemize}
+\end{frame}
+
+\section{Results}
+
+\begin{frame}{Optimal program design (decision thresholds)}
+Optimal decision thresholds at $\mu = -1.0$; $\tau = 1.0$; $\sigma^2 = 2.0$; $N = 1000$; $k=1$ and $\gamma = 0.99$
+\begin{figure}
+        \centering
+        \includegraphics[width=0.8\linewidth]{Thresholds}
+\end{figure}    
+Intuition -- early: prioritize further testing; later: only re-test very uncertain cases!
+\end{frame}
+
+\begin{frame}{Optimal program design (action probabilities)}
+Probabilities of each action implied by decision thresholds:
+\begin{figure}
+        \centering
+        \includegraphics[width=0.8\linewidth]{ActionP.png}
+\end{figure}
+Intuition? Given most ideas are bad, immediately discard most unless strong evidence in favor.
+\end{frame}
+
+\begin{frame}{Optimal program design (number of ideas)}
+\begin{itemize}
+        \item \textbf{Naive return}: Expected payoff if decision had to be made after one period. Equal to posterior mean 
+        \item \textbf{Temporal-aware return}: Expected payoff from following decision rule. Allows for higher return on average within `continue' range. 
+\end{itemize}
+\begin{figure}
+        \centering
+        \includegraphics[width=0.8\linewidth]{Figure_1.png}
+\end{figure}    
+\end{frame}
+
+\begin{frame}{Optimal program design (payoff)}
+Expected payoff changing with number of ideas selected to test each period, given optimal decision thresholds.
+\begin{figure}
+        \centering
+        \includegraphics[width=0.8\linewidth]{Ideas.png}
+\end{figure}   
+Intuition? Trade-off between increasing the number of ideas tested each period and decreasing testing power due to finite resources.
+\end{frame}
+
+\begin{frame}{Defining a baseline strategy for comparison}
+\begin{itemize}
+    \item Compare `temporal-aware' results to a restricted strategy -- without the option to continue testing.
+    \item Chooses $t^*$ periods over which to accumulate signals and $k^*$ ideas. `Ship' / `shelve' each tested unit after $t^*$ periods:
+\end{itemize} 
+\begin{figure}
+        \centering
+        \includegraphics[width=0.8\linewidth]{Naive.png}
+\end{figure}   
+\end{frame}
+
+\begin{frame}{Strategy comparison}
+Use average per-period naive strategy and temporal-aware payoffs to compare the two approaches.
+With these parameters, `temporal-awareness' has:
+\begin{itemize}
+    \item $\approx 70x$ faster testing per idea
+    \item $\approx 20x$ higher per-period ideas tested 
+    \item $\approx 5x$ higher per-period expected return
+\end{itemize} 
+Results are robust to different parameters. 
+Temporal awareness exhibits even higher relative performance with lower $\mu$ and $\sigma^2$; and higher $\gamma$.
+\end{frame}
+
+\section{Outlook}
+
+\begin{frame}{Extensions}
+Various modifications / extensions are possible which lead to a richer model:
+    \begin{itemize}
+        \item Cost of ideation (increases `continue' rate!)
+        \item Risk-aversion (increases `continue' rate!)
+        \item Cost of implementation (?)
+        \item Alternative distributions (?)
+    \end{itemize}
+As well as considering these, my next steps are:
+\begin{itemize}
+    \item Repeat analysis using real-world data from Netflix
+    \item Consider links to wider literature including sequential frequentist testing
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Thanks}
+    \begin{center}
+        {\Large{Thanks for listening!}}
+    \end{center}
+    \begin{center}
+        {Even if you are not assigned to me for peer feedback, any thoughts/comments still welcome at mrobin10@stanford.edu (or in person).}
+    \end{center}
+\end{frame}
+
+\begin{frame}
+References:
+   \bibliography{ref}
+\end{frame}
+
+
+\end{document}
