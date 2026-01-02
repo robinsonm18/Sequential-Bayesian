@@ -3,8 +3,8 @@ from scipy.stats import norm
 import matplotlib.pyplot as plt
 
 # Import the modules
-from Baseline import baseline_optimal
-from Temporal_aware import (
+from Code.Baseline import baseline_optimal
+from Code.Temporal_aware import (
     value_iteration_with_c,
     compute_action_probabilities,
     compute_steady_state_values
@@ -357,7 +357,7 @@ if __name__ == "__main__":
         
         # Get tau1 and recompute V for plotting
         tau1 = taus[0]
-        from Temporal_aware import solve_value_iteration_for_tau, build_transition_kernel, update_tau
+        from Code.Temporal_aware import solve_value_iteration_for_tau, build_transition_kernel, update_tau
         tau2 = update_tau(tau1, sigma2)
         var_mprime1 = max(tau1 - tau2, 0.0)
         N_grid = len(ms)

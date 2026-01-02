@@ -8,7 +8,7 @@ import math
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 
-from Temporal_aware import (
+from Code.Temporal_aware import (
     value_iteration_with_c,
     compute_action_probabilities,
     compute_steady_state_values,
